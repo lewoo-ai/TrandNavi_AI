@@ -3,11 +3,13 @@ from app.services.naver_shopping_service import get_naver_shopping_data, format_
 from app.services.trend_service import get_related_topics  # 트렌드 서비스 추가
 from app.llm_config import llm, prompt, trend_template, extract_keyword  # 트렌드 템플릿 및 키워드 추출 함수 추가
 from app.redis_handler import RedisChatMemory
+from flask_jwt_extended import jwt_required
 import json
 
 chat_bp = Blueprint('chat', __name__)
 
 @chat_bp.route('/chat', methods=['POST'])
+@jwt_required()
 def chat():
     user_message = request.json['message']
     session_id = request.json.get("session_id", "default_session")
@@ -66,7 +68,11 @@ def chat():
 
         # 네이버 쇼핑 API로 상품 정보 가져오기
         items = get_naver_shopping_data(user_message)
-        product_info = format_product_info(items)
+        if items:
+            product_info = format_product_info(items)
+            print(product_info)
+        else:
+            product_info = "상품 정보를 찾을 수 없습니다."
 
         # 최근 대화 기록 불러오기
         recent_history = redis_memory.get_recent_history(limit=5)
